@@ -1,0 +1,12 @@
+node_modules/
+dist/
+tmp/
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+.DS_Store
+coverage/
+
+# Copied from the installed PDF.js package by Vite.
+public/pdf-assets/
