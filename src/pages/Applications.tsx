@@ -292,7 +292,7 @@ function ApplicationEditor({ application: a }: { application: Application }) {
                   <div className="alert success">
                     Demo application recorded. No external application was
                     submitted.
-                    <Link to="/applications/tracker">Open tracker</Link>
+                    <Link to="/tracker">Open tracker</Link>
                   </div>
                 )}
               </>
@@ -367,7 +367,7 @@ function ApplicationEditor({ application: a }: { application: Application }) {
             <Download size={16} />
             Export package
           </button>
-          <Link className="text-button" to="/applications/tracker">
+          <Link className="text-button" to="/tracker">
             View timeline
             <ArrowRight size={15} />
           </Link>

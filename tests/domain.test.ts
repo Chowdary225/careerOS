@@ -48,6 +48,16 @@ describe("profile and matching", () => {
     expect(profileCompletion(emptyProfile)).toBe(0);
     expect(emptyProfile.experience).toEqual([]);
   });
+  it("persists imported project technologies and source links", () => {
+    const workspace = structuredClone(emptyWorkspace());
+    workspace.profile.projects = [{
+      id: "project-1", name: "Inventory", description: "A stock dashboard.",
+      technologies: ["React"], url: "https://example.test/project",
+      source: { resumeId: "resume-1", resumeName: "fixture.pdf" },
+    }];
+    writeWorkspace(workspace);
+    expect(readWorkspace().profile.projects).toEqual(workspace.profile.projects);
+  });
   it("awards skills only for exact normalized matches", () => {
     const p = structuredClone(emptyProfile);
     p.skills = [
@@ -57,12 +67,13 @@ describe("profile and matching", () => {
     const result = matchJob(p, jobs[0]);
     expect(result.skills).toEqual(["React"]);
     expect(result.experience).toBe(null);
-    expect(result.percentage).toBe(15);
+    expect(result.percentage).toBe(13);
   });
   it("scores complete matching criteria and accepts zero years", () => {
     const p = structuredClone(emptyProfile);
     p.skills = jobs[0].skills.map((name, id) => ({ id: String(id), name }));
     p.years = "2";
+    p.targetRole = "Frontend Developer";
     p.education = [
       {
         id: "e",
@@ -75,6 +86,27 @@ describe("profile and matching", () => {
     expect(matchJob(p, jobs[0]).percentage).toBe(100);
     p.years = "0";
     expect(matchJob(p, jobs[0]).experience).toBe(false);
+  });
+  it("includes deterministic title and work-mode alignment", () => {
+    const p = structuredClone(emptyProfile);
+    p.targetRoles = ["Frontend Developer", "Product Designer"];
+    p.mode = "Remote";
+    const result = matchJob(p, jobs[0]);
+    expect(result.roleRelevance).toBe(100);
+    expect(result.location).toBe(false);
+    expect(result.percentage).toBe(20);
+    p.targetRoles = [];
+    p.targetRole = "Frontend Engineer";
+    p.mode = "Hybrid";
+    expect(matchJob(p, jobs[0]).roleRelevance).toBe(50);
+    expect(matchJob(p, jobs[0]).location).toBe(true);
+  });
+  it("recognizes a B.E. profile for a bachelor's degree requirement", () => {
+    const p = structuredClone(emptyProfile);
+    p.education = [{
+      id: "edu-1", institution: "Example University", degree: "B.E. - Computer Science", dates: "2020 - 2024",
+    }];
+    expect(matchJob(p, jobs[0]).education).toBe(true);
   });
 });
 describe("resume safety and extraction", () => {
@@ -138,6 +170,28 @@ describe("application lifecycle", () => {
     expect(original.text).toBe(
       "SKILLS\nReact\nEXPERIENCE\nMy original experience",
     );
+  });
+  it("builds the tailored copy from the saved profile while preserving its source resume", () => {
+    const profile = structuredClone(emptyProfile);
+    profile.user = {
+      name: "Asha QA Imported", email: "asha@example.test", phone: "555-0100", location: "Seattle",
+    };
+    profile.summary = "Profile-approved backend engineer.";
+    profile.experience = [{
+      id: "experience-1", company: "Example Systems", role: "Backend Engineer",
+      dates: "2022 - Present", description: "Built reliable APIs.",
+    }];
+    profile.skills = [{ id: "skill-1", name: "TypeScript" }];
+    const sourceResume = { ...original, text: "LEO CHEN\nOld summary\nOld resume content" };
+    const result = createPackage(profile, jobs[0], sourceResume);
+
+    expect(result.version.text).toContain("Asha QA Imported");
+    expect(result.version.text).toContain("asha@example.test");
+    expect(result.version.text).toContain("Profile-approved backend engineer.");
+    expect(result.version.text).toContain("Backend Engineer at Example Systems | 2022 - Present");
+    expect(result.version.text).toContain("TypeScript");
+    expect(result.version.text).not.toContain("LEO CHEN");
+    expect(sourceResume.text).toBe("LEO CHEN\nOld summary\nOld resume content");
   });
   it("does not invent content for a scanned resume", () => {
     expect(() =>

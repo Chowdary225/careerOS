@@ -34,7 +34,7 @@ const navigation = [
   ["/resume", "Resume", FileText],
   ["/jobs", "Jobs", BriefcaseBusiness],
   ["/applications", "Applications", Send],
-  ["/applications/tracker", "Application Tracker", RouteIcon],
+  ["/tracker", "Application Tracker", RouteIcon],
 ] as const;
 export default function App() {
   const [open, setOpen] = useState(false);
@@ -212,7 +212,11 @@ export default function App() {
             <Route path="/resume" element={<ResumePage />} />
             <Route path="/jobs" element={<Jobs />} />
             <Route path="/applications" element={<Applications />} />
-            <Route path="/applications/tracker" element={<Tracker />} />
+            <Route path="/tracker" element={<Tracker />} />
+            <Route
+              path="/applications/tracker"
+              element={<Navigate to="/tracker" replace />}
+            />
             <Route path="/privacy" element={<Legal kind="privacy" />} />
             <Route path="/terms" element={<Legal kind="terms" />} />
             <Route

@@ -23,17 +23,24 @@ import {
   Badge,
   Empty,
   RouteButton,
+  Field,
   formatDate,
 } from "../components/ui";
 import { DocumentPreview } from "../components/DocumentPreview";
 import { Tabs } from "../components/Tabs";
-import { parseResume, extractSections } from "../services/resume";
+import {
+  parseResume,
+  extractSections,
+  extractStructuredResume,
+  replaceSectionText,
+} from "../services/resume";
+import { applyStructuredResume } from "../services/profileImport";
 import {
   storeOriginal,
   getOriginal,
   removeOriginal,
 } from "../services/repository";
-import { sections, type Section } from "../types";
+import { sections, type Section, type StructuredResume } from "../types";
 import { reviewResumeVersion } from "../services/applications";
 import { jobs } from "../data/jobs";
 const icons = [BriefcaseBusiness, GraduationCap, Shapes, Folder, Medal, Trophy];
@@ -52,6 +59,8 @@ export function ResumePage() {
   const [error, setError] = useState("");
   const [review, setReview] = useState<Section | null>(null);
   const [draft, setDraft] = useState("");
+  const [showStructuredReview, setShowStructuredReview] = useState(false);
+  const [structuredDraft, setStructuredDraft] = useState<StructuredResume | null>(null);
   const input = useRef<HTMLInputElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   const mounted = useRef(true);
@@ -63,6 +72,9 @@ export function ResumePage() {
   }, []);
   const resume = data.resumes.find((r) => r.id === selected);
   const sourceSections = resume ? extractSections(resume.text) : null;
+  const structured = resume?.structuredExtraction;
+  useEffect(() => setStructuredDraft(structured || null), [resume?.id, structured]);
+  const reviewedStructured = structuredDraft || structured;
   const [versionEdit, setVersionEdit] = useState("");
   const [versionText, setVersionText] = useState("");
   const versionLocked = data.applications.some(
@@ -134,6 +146,30 @@ export function ResumePage() {
     setDraft(resume?.extraction[section].text || "");
     dialog.current?.showModal();
   };
+  const confirmStructuredResume = () => {
+    if (!resume || !reviewedStructured) return;
+    const source = { resumeId: resume.id, resumeName: resume.name };
+    if (update((workspace) => ({
+      ...workspace,
+      profile: applyStructuredResume(workspace.profile, reviewedStructured, source),
+      resumes: workspace.resumes.map((item) => item.id === resume.id
+        ? {
+            ...item,
+            structuredExtraction: reviewedStructured,
+            structuredConfirmed: true,
+            extraction: Object.fromEntries(sections.map((section) => [
+              section,
+              { ...item.extraction[section], confirmed: true },
+            ])) as typeof item.extraction,
+          }
+        : item),
+    }))) {
+      setShowStructuredReview(false);
+      notify("Reviewed structured details merged into your Professional Profile. Existing values were preserved.");
+    }
+  };
+  const updateStructured = (change: (current: StructuredResume) => StructuredResume) =>
+    setStructuredDraft((current) => current ? change(current) : current);
   return (
     <>
       <PageHeader
@@ -299,7 +335,10 @@ export function ResumePage() {
                             {entry?.confirmed
                               ? "Confirmed"
                               : entry?.text.trim()
-                                ? "Detected · Ready to review"
+                                ? structured && Object.entries(structured.confidence).some(([path, level]) =>
+                                    path.toLowerCase().startsWith(`${section.toLowerCase()}.`) && level === "review")
+                                  ? "Please review this information"
+                                  : "Detected · Ready to review"
                                 : "Not detected"}
                           </small>
                         </span>
@@ -311,6 +350,150 @@ export function ResumePage() {
                       </button>
                     );
                   })}
+                </div>
+                <div className="subsection structured-extraction">
+                  <h3>Structured profile extraction</h3>
+                  <p className="muted small">
+                    Local parser output. Values marked “Please review this information” need comparison with the original resume.
+                  </p>
+                  <button
+                    className="button secondary"
+                    disabled={!structured}
+                    onClick={() => setShowStructuredReview((visible) => !visible)}
+                  >
+                    {showStructuredReview ? "Hide extracted information" : "Review extracted information"}
+                  </button>
+                  {structured && showStructuredReview && reviewedStructured && (
+                    <div className="structured-review-content" aria-live="polite">
+                      <p>Check and edit every field before confirming. Blank values stay blank.</p>
+                      <h4>Personal information</h4>
+                      {(["name", "email", "phone", "location", "linkedin", "portfolio"] as const).map((key) => {
+                        const value = reviewedStructured.personalInfo[key] || "";
+                        const id = `resume-review-personal-${key}`;
+                        return <Field key={key} label={key}>
+                          <input id={id} name={id} value={value} onChange={(event) => updateStructured((current) => ({
+                            ...current,
+                            personalInfo: { ...current.personalInfo, [key]: event.target.value.trim() ? event.target.value : null },
+                          }))} />
+                          {value && structured.confidence[`personalInfo.${key}`] !== "high" && <small>Please review this information against the original.</small>}
+                        </Field>;
+                      })}
+                      <Field label="Professional summary">
+                        <textarea id="resume-review-summary" name="resume-review-summary" rows={4}
+                          value={reviewedStructured.professionalSummary || ""}
+                          onChange={(event) => updateStructured((current) => ({ ...current, professionalSummary: event.target.value.trim() ? event.target.value : null }))} />
+                      </Field>
+                      <h4>Experience</h4>
+                      {reviewedStructured.experience.length ? reviewedStructured.experience.map((entry, index) => (
+                        <fieldset key={`experience-${index}`}>
+                          <legend>Experience {index + 1}</legend>
+                          {(["jobTitle", "company", "location", "startDate", "endDate"] as const).map((key) => {
+                            const id = `resume-review-experience-${index}-${key}`;
+                            return <Field key={key} label={key}>
+                              <input id={id} name={id} value={entry[key] || ""} onChange={(event) => updateStructured((current) => ({
+                                ...current,
+                                experience: current.experience.map((item, itemIndex) => itemIndex === index
+                                  ? { ...item, [key]: event.target.value.trim() ? event.target.value : null }
+                                  : item),
+                              }))} />
+                            </Field>;
+                          })}
+                          {(["responsibilities", "achievements"] as const).map((key) => {
+                            const id = `resume-review-experience-${index}-${key}`;
+                            return <Field key={key} label={`${key} (one per line)`}>
+                              <textarea id={id} name={id} rows={3} value={entry[key].join("\n")} onChange={(event) => updateStructured((current) => ({
+                                ...current,
+                                experience: current.experience.map((item, itemIndex) => itemIndex === index
+                                  ? { ...item, [key]: event.target.value.split("\n").map((line) => line.trim()).filter(Boolean) }
+                                  : item),
+                              }))} />
+                            </Field>;
+                          })}
+                        </fieldset>
+                      )) : <p>Not detected</p>}
+                      <h4>Education</h4>
+                      {reviewedStructured.education.length ? reviewedStructured.education.map((entry, index) => (
+                        <fieldset key={`education-${index}`}>
+                          <legend>Education {index + 1}</legend>
+                          {(["institution", "degree", "field", "location", "startDate", "endDate", "grade"] as const).map((key) => {
+                            const id = `resume-review-education-${index}-${key}`;
+                            return <Field key={key} label={key}>
+                              <input id={id} name={id} value={entry[key] || ""} onChange={(event) => updateStructured((current) => ({
+                                ...current,
+                                education: current.education.map((item, itemIndex) => itemIndex === index
+                                  ? { ...item, [key]: event.target.value.trim() ? event.target.value : null }
+                                  : item),
+                              }))} />
+                            </Field>;
+                          })}
+                        </fieldset>
+                      )) : <p>Not detected</p>}
+                      <Field label="Skills (one per line)">
+                        <textarea id="resume-review-skills" name="resume-review-skills" rows={4}
+                          value={reviewedStructured.skills.join("\n")}
+                          onChange={(event) => updateStructured((current) => ({ ...current, skills: event.target.value.split("\n").map((line) => line.trim()).filter(Boolean) }))} />
+                      </Field>
+                      <h4>Projects</h4>
+                      {reviewedStructured.projects.length ? reviewedStructured.projects.map((entry, index) => (
+                        <fieldset key={`project-${index}`}>
+                          <legend>Project {index + 1}</legend>
+                          {(["name", "description"] as const).map((key) => {
+                            const id = `resume-review-project-${index}-${key}`;
+                            return <Field key={key} label={key}>
+                              <textarea id={id} name={id} rows={key === "description" ? 3 : 1} value={entry[key]} onChange={(event) => updateStructured((current) => ({
+                                ...current,
+                                projects: current.projects.map((item, itemIndex) => itemIndex === index ? { ...item, [key]: event.target.value } : item),
+                              }))} />
+                            </Field>;
+                          })}
+                          <Field label="Technologies (one per line)">
+                            <textarea id={`resume-review-project-${index}-technologies`} name={`resume-review-project-${index}-technologies`} rows={2}
+                              value={entry.technologies.join("\n")} onChange={(event) => updateStructured((current) => ({
+                                ...current,
+                                projects: current.projects.map((item, itemIndex) => itemIndex === index
+                                  ? { ...item, technologies: event.target.value.split("\n").map((line) => line.trim()).filter(Boolean) }
+                                  : item),
+                              }))} />
+                          </Field>
+                          <Field label="Project URL (optional)">
+                            <input id={`resume-review-project-${index}-url`} name={`resume-review-project-${index}-url`}
+                              value={entry.url || ""} onChange={(event) => updateStructured((current) => ({
+                                ...current,
+                                projects: current.projects.map((item, itemIndex) => itemIndex === index
+                                  ? { ...item, url: event.target.value.trim() ? event.target.value : null }
+                                  : item),
+                              }))} />
+                          </Field>
+                        </fieldset>
+                      )) : <p>Not detected</p>}
+                      <h4>Certifications</h4>
+                      {reviewedStructured.certifications.length ? reviewedStructured.certifications.map((entry, index) => (
+                        <fieldset key={`certification-${index}`}>
+                          <legend>Certification {index + 1}</legend>
+                          {(["name", "issuer", "date"] as const).map((key) => {
+                            const id = `resume-review-certification-${index}-${key}`;
+                            return <Field key={key} label={key}>
+                              <input id={id} name={id} value={entry[key] || ""} onChange={(event) => updateStructured((current) => ({
+                                ...current,
+                                certifications: current.certifications.map((item, itemIndex) => itemIndex === index
+                                  ? { ...item, [key]: event.target.value.trim() ? event.target.value : null }
+                                  : item),
+                              }))} />
+                            </Field>;
+                          })}
+                        </fieldset>
+                      )) : <p>Not detected</p>}
+                      <Field label="Achievements (one per line)">
+                        <textarea id="resume-review-achievements" name="resume-review-achievements" rows={3}
+                          value={reviewedStructured.achievements.join("\n")}
+                          onChange={(event) => updateStructured((current) => ({ ...current, achievements: event.target.value.split("\n").map((line) => line.trim()).filter(Boolean) }))} />
+                      </Field>
+                      {structured.warnings.map((warning) => <p className="alert" key={warning}>{warning}</p>)}
+                      <button className="button" onClick={confirmStructuredResume}>
+                        Confirm details
+                      </button>
+                    </div>
+                  )}
                 </div>
                 <button
                   className="button review-button"
@@ -503,6 +686,8 @@ export function ResumePage() {
           <label className="field">
             <span>Extracted details</span>
             <textarea
+              id="resume-extraction-review"
+              name="resume-extraction-review"
               rows={12}
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
@@ -514,28 +699,30 @@ export function ResumePage() {
               className="button"
               onClick={() => {
                 if (!resume || !review) return;
+                const editedText = replaceSectionText(resume.text, review, draft);
+                const editedSections = extractSections(editedText);
+                editedSections[review].confirmed = true;
                 if (
                   update((d) => ({
                     ...d,
-                    resumes: d.resumes.map((r) =>
-                      r.id === resume.id
-                        ? {
-                            ...r,
-                            extraction: {
-                              ...r.extraction,
-                              [review]: { text: draft, confirmed: true },
-                            },
-                          }
-                        : r,
-                    ),
+                    resumes: d.resumes.map((r) => r.id === resume.id
+                      ? {
+                          ...r,
+                          text: editedText,
+                          extraction: editedSections,
+                          structuredExtraction: extractStructuredResume(editedText),
+                          structuredConfirmed: false,
+                        }
+                      : r),
                   }))
                 ) {
                   dialog.current?.close();
-                  notify(`${review} confirmed. Original unchanged.`);
+                  setShowStructuredReview(false);
+                  notify(`${review} text saved for review. Original resume file unchanged.`);
                 }
               }}
             >
-              Confirm details
+              Save reviewed section
             </button>
             <button
               className="button secondary"

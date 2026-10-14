@@ -1,7 +1,7 @@
 import type { CareerProfile, Workspace, Resume } from "../types";
 import { isWorkspace } from "./validation";
 export const emptyProfile: CareerProfile = {
-  user: { name: "", email: "", phone: "", location: "" },
+  user: { name: "", email: "", phone: "", location: "", linkedin: "", portfolio: "" },
   targetRole: "",
   category: "Engineering",
   location: "",

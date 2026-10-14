@@ -23,14 +23,16 @@ npm run preview -- --port 4173
 
 With the preview running, run `npm run qa:routes -- http://127.0.0.1:4173` to check local route serving and built asset integrity.
 
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for static-host settings, SPA fallback, domain/HTTPS steps, and deployment limitations.
+
 ## Included workspaces
 
 - `/dashboard`: calculated profile completion, local application counts, next actions and recent activity.
 - `/profile`: validated career requirements, contact details, structured experience and education, skills, projects, certifications, achievements and multiple target roles.
-- `/resume`: real PDF/DOCX upload, PDF canvas preview and pagination, DOCX plain-text preview, local text extraction, editable section review, actual text-readability checks, immutable original-file downloads and separate tailored versions.
+- `/resume`: PDF/DOCX upload, PDF canvas preview and pagination, DOCX plain-text preview, local structured extraction, editable field-by-field review before profile confirmation, text-readability checks, immutable original-file downloads and separate tailored versions.
 - `/jobs`: explicitly fictional jobs, search, combined filters, saving, deterministic matching and application preparation.
 - `/applications`: separate resume drafts, cover letters, answers, reviewed applicant snapshots, approval, local demo apply and JSON package export.
-- `/applications/tracker`: per-application history, primary stages and alternative outcomes, manual status updates and next actions.
+- `/tracker`: canonical application tracker with per-application history, manual status updates and next actions. `/applications/tracker` redirects for compatibility.
 - `/privacy` and `/terms`: draft operational disclosures for legal review. Privacy includes record export and confirmed local deletion.
 
 ## Try the workflow
@@ -48,8 +50,8 @@ With the preview running, run `npm run qa:routes -- http://127.0.0.1:4173` to ch
 - `src/types`: typed domain models.
 - `src/services/repository.ts`: localStorage workspace records and an IndexedDB original-file store. Originals use `add`, never an overwrite operation.
 - `src/services/resume.ts` and `docx.ts`: local PDF.js parsing and DOCX XML text extraction using fflate. Neither sends documents to an external service or executes uploaded document markup.
-- `src/services/matching.ts`: transparent matching rules, weighted 60% skills, 20% experience, 10% education, 10% preferred location. Unknown details receive no points. This is not a hiring prediction.
-- `src/services/applications.ts`: preparation, approval validation, applicant snapshots, demo application recording and timeline transitions.
+- `src/services/matching.ts`: transparent deterministic matching: 50% required skills, 20% target-role wording, 15% experience, 5% education, 10% preferred location/work mode. Unknown profile criteria receive no points. This is not a hiring prediction.
+- `src/services/applications.ts`: preparation from confirmed profile content (with source-resume fallback), approval validation, applicant snapshots, demo application recording and timeline transitions.
 - `src/app/store.tsx`: repository-backed shared state with storage error reporting, stale-update protection and cross-tab conflict detection. Reload after a cross-tab conflict. Corrupt records are preserved for export from Privacy; clearing them requires explicit deletion.
 - PDF character maps and fonts are copied from the installed dependency at build time and served locally with the worker.
 - `src/pages` and `src/components`: routed workspaces and shared presentation.
@@ -70,7 +72,7 @@ No backend, authentication, analytics, external AI, automatic application system
 
 ## Verification
 
-All 71 automated tests and the production build pass; the current dependency audit reports zero known vulnerabilities. See [QA.md](QA.md) for scoped evidence and open launch gates, and [the browser checklist](docs/BROWSER_QA.md) for pending graphical checks. The app is a functional local MVP, not a declared production-ready deployment.
+The current automated suite contains 88 tests; TypeScript and the production build pass. The most recent dependency-audit attempt was blocked because the npm registry was unreachable, so no current vulnerability result is claimed. There is no lint script in `package.json`. See [QA.md](QA.md) for scoped evidence and open launch gates, and [the browser QA record](docs/BROWSER_QA.md) for completed graphical checks and remaining verification. The app is a functional local MVP, not a declared production-ready deployment.
 
 ## Deployment
 

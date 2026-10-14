@@ -125,7 +125,7 @@ export function Dashboard() {
           </span>
           <strong>{active.length.toString().padStart(2, "0")}</strong>
           <span className="stat-note">Prepared and in-progress packages</span>
-          <Link to="/applications/tracker">
+          <Link to="/tracker">
             View your tracker
             <ArrowUpRight size={14} />
           </Link>

@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, useLocation } from "react-router-dom";
 import { describe, it, expect } from "vitest";
 import App from "../src/app/App";
 import { StoreProvider } from "../src/app/store";
@@ -14,10 +14,14 @@ function mount(path: string) {
   return render(
     <MemoryRouter initialEntries={[path]}>
       <StoreProvider>
+        <LocationProbe />
         <App />
       </StoreProvider>
     </MemoryRouter>,
   );
+}
+function LocationProbe() {
+  return <output data-testid="current-path">{useLocation().pathname}</output>;
 }
 describe("all workspace routes", () => {
   for (const [path, heading] of [
@@ -26,7 +30,7 @@ describe("all workspace routes", () => {
     ["/resume", "Resume workspace"],
     ["/jobs", "Jobs, with context."],
     ["/applications", "Applications"],
-    ["/applications/tracker", "Application tracker"],
+    ["/tracker", "Application tracker"],
     ["/privacy", "Privacy Policy"],
     ["/terms", "Terms & Conditions"],
   ])
@@ -41,6 +45,35 @@ describe("all workspace routes", () => {
     expect(
       screen.getByRole("heading", { name: "Page not found" }),
     ).toBeTruthy();
+  });
+  it("redirects the legacy tracker URL to the canonical route", async () => {
+    mount("/applications/tracker");
+    await waitFor(() =>
+      expect(screen.getByTestId("current-path").textContent).toBe("/tracker"),
+    );
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Application tracker" }),
+    ).toBeTruthy();
+  });
+  it("navigates to the tracker from Dashboard and Applications", async () => {
+    const user = userEvent.setup();
+    const dashboard = mount("/dashboard");
+    await user.click(screen.getByRole("link", { name: "View your tracker" }));
+    expect(screen.getByTestId("current-path").textContent).toBe("/tracker");
+    dashboard.unmount();
+
+    mount("/applications");
+    await user.click(
+      screen.getByRole("link", { name: "Application Tracker" }),
+    );
+    expect(screen.getByTestId("current-path").textContent).toBe("/tracker");
+  });
+  it("renders the canonical route again after a refresh-style remount", () => {
+    const first = mount("/tracker");
+    expect(screen.getByRole("heading", { name: "Application tracker" })).toBeTruthy();
+    first.unmount();
+    mount("/tracker");
+    expect(screen.getByRole("heading", { name: "Application tracker" })).toBeTruthy();
   });
   it("toggles mobile navigation", async () => {
     mount("/dashboard");
@@ -217,19 +250,40 @@ describe("resume review and storage controls", () => {
       "React, TypeScript",
     );
     await userEvent.click(
-      screen.getByRole("button", { name: "Confirm details" }),
+      screen.getByRole("button", { name: "Save reviewed section" }),
     );
     const saved = readWorkspace().resumes[0];
     expect(saved.extraction.Skills).toEqual({
       text: "React, TypeScript",
       confirmed: true,
     });
-    expect(saved.text).toBe("SKILLS\nReact");
+    expect(readWorkspace().profile.skills).toEqual([]);
+    expect(saved.text).toBe("SKILLS\nReact, TypeScript");
+    await userEvent.click(
+      screen.getByRole("button", { name: "Review extracted information" }),
+    );
+    const reviewedName = screen.getByLabelText("name");
+    expect(reviewedName.id).toBeTruthy();
+    expect(reviewedName.getAttribute("name")).toBeTruthy();
+    await userEvent.type(reviewedName, "Verified Test Name");
+    await userEvent.click(screen.getByRole("button", { name: "Confirm details" }));
+    expect(readWorkspace().profile.user.name).toBe("Verified Test Name");
+    expect(readWorkspace().resumes[0].structuredExtraction?.personalInfo.name).toBe("Verified Test Name");
+    expect(readWorkspace().profile.skills.map((skill) => skill.name)).toEqual([
+      "React",
+      "TypeScript",
+    ]);
     expect(
       screen
         .getByRole("button", { name: "Download original resume" })
         .hasAttribute("disabled"),
     ).toBe(false);
+    mount("/profile");
+    await userEvent.click(
+      screen.getByRole("tab", { name: "Professional profile" }),
+    );
+    expect(screen.getByText("React")).toBeTruthy();
+    expect(screen.getByText("TypeScript")).toBeTruthy();
   });
   it("reports storage write failures without a false saved state", async () => {
     mount("/profile");

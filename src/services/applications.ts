@@ -24,10 +24,11 @@ export function createPackage(
   const versionId = `RES-${id().toUpperCase()}`;
   const applicationId = `APP-${new Date().getFullYear()}-${id().toUpperCase()}`;
   const skills = matchJob(profile, job).skills;
+  const resumeText = formatProfileResume(profile, resume);
   const text =
     (skills.length
       ? `RELEVANT PROFILE SKILLS\n${skills.join(" · ")}\n\n`
-      : "") + resume.text;
+      : "") + resumeText;
   return {
     version: {
       id: versionId,
@@ -54,6 +55,88 @@ export function createPackage(
       ],
     },
   };
+}
+
+/** Prefer the saved, user-reviewed profile when building a tailored copy. */
+function formatProfileResume(profile: CareerProfile, resume: Resume): string {
+  const extracted = resume.structuredExtraction;
+  const hasProfileContent = Boolean(
+    profile.summary.trim() || profile.experience.length || profile.education.length ||
+    profile.skills.length || profile.projects.length || profile.certifications.length ||
+    profile.achievements.trim(),
+  );
+  if (!hasProfileContent && !extracted) return resume.text;
+
+  const contact = [
+    profile.user.email || extracted?.personalInfo.email,
+    profile.user.phone || extracted?.personalInfo.phone,
+  ].filter(Boolean).join(" | ");
+  const location = profile.user.location || extracted?.personalInfo.location;
+  const links = [
+    profile.user.linkedin || extracted?.personalInfo.linkedin,
+    profile.user.portfolio || extracted?.personalInfo.portfolio,
+  ].filter(Boolean).join(" | ");
+  const lines = [
+    profile.user.name || extracted?.personalInfo.name,
+    contact,
+    location ? `Location: ${location}` : "",
+    links,
+  ].filter(Boolean);
+  const addSection = (heading: string, items: string[]) => {
+    const content = items.map((item) => item.trim()).filter(Boolean);
+    if (content.length) lines.push("", heading, ...content);
+  };
+
+  const summary = profile.summary.trim() || extracted?.professionalSummary || "";
+  addSection("Professional Summary", summary ? [summary] : []);
+
+  const experience = profile.experience.length
+    ? profile.experience.map((entry) => [
+        `${entry.role} at ${entry.company}${entry.dates ? ` | ${entry.dates}` : ""}`,
+        entry.description,
+      ].filter(Boolean).join("\n"))
+    : (extracted?.experience || []).map((entry) => [
+        `${entry.jobTitle || ""}${entry.company ? ` at ${entry.company}` : ""}${entry.startDate || entry.endDate ? ` | ${[entry.startDate, entry.endDate].filter(Boolean).join(" - ")}` : ""}`,
+        ...entry.responsibilities.map((line) => `• ${line}`),
+        ...entry.achievements.map((line) => `• ${line}`),
+      ].filter(Boolean).join("\n"));
+  addSection("Experience", experience);
+
+  const education = profile.education.length
+    ? profile.education.map((entry) => `${entry.degree}${entry.institution ? ` | ${entry.institution}` : ""}${entry.dates ? ` | ${entry.dates}` : ""}`)
+    : (extracted?.education || []).map((entry) => [
+        [entry.degree, entry.field].filter(Boolean).join(" "), entry.institution,
+        [entry.startDate, entry.endDate].filter(Boolean).join(" - "), entry.grade,
+      ].filter(Boolean).join(" | "));
+  addSection("Education", education);
+
+  const skillsList = profile.skills.length
+    ? profile.skills.map((entry) => entry.name)
+    : extracted?.skills || [];
+  addSection("Skills", skillsList.length ? [skillsList.join(", ")] : []);
+
+  const projects = profile.projects.length
+    ? profile.projects.map((entry) => [
+        `${entry.name}${entry.technologies?.length ? ` | Technologies: ${entry.technologies.join(", ")}` : ""}`,
+        entry.description, entry.url,
+      ].filter(Boolean).join("\n"))
+    : (extracted?.projects || []).map((entry) => [
+        `${entry.name}${entry.technologies.length ? ` | Technologies: ${entry.technologies.join(", ")}` : ""}`,
+        entry.description, entry.url,
+      ].filter(Boolean).join("\n"));
+  addSection("Projects", projects);
+
+  const certifications = profile.certifications.length
+    ? profile.certifications.map((entry) => `${entry.name}${entry.issuer ? ` | ${entry.issuer}` : ""}`)
+    : (extracted?.certifications || []).map((entry) => `${entry.name}${entry.issuer ? ` | ${entry.issuer}` : ""}${entry.date ? ` | ${entry.date}` : ""}`);
+  addSection("Certifications", certifications);
+
+  const achievements = profile.achievements.trim()
+    ? profile.achievements.split(/\r?\n/)
+    : extracted?.achievements || [];
+  addSection("Achievements", achievements);
+
+  return lines.join("\n");
 }
 function event(status: Status, note: string): ApplicationEvent {
   return { id: id(), date: new Date().toISOString(), status, note };

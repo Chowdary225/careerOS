@@ -1,6 +1,38 @@
-# CareerOS browser QA procedure
+# CareerOS browser QA
 
-All checks below are pending. Use synthetic data and a dedicated browser profile. Do not clear a personal workspace while testing.
+Browser work used Safari on the local production preview at `http://127.0.0.1:4173` and committed synthetic fixtures only. Exact fixture names were checked in the file picker. Do not use unrelated files from Downloads. The app stores records locally by origin and originals in IndexedDB.
+
+## VERIFIED
+
+- [x] Local production route/assets check: 10 application route shells and 193 built assets passed `npm run qa:routes -- http://127.0.0.1:4173`.
+- [x] Final-build route/assets check after adding the host fallback: 10 route shells and 194 assets passed `npm run qa:routes -- http://127.0.0.1:4174`; `dist/_redirects` contains `/* /index.html 200`.
+- [x] Responsive spot check: Safari Responsive Design Mode at 390×844 showed the dashboard's mobile header and menu control, with no obvious overlap/clipping in the visible dashboard content. This does not cover the full requested matrix.
+- [x] `/tracker` opened directly and rendered Application Tracker; refreshing kept the tracker route. `/applications/tracker` resolved to `/tracker`. `/unknown-qa-route` rendered the not-found view.
+- [x] PDF: uploaded `tests/fixtures/resumes/single-column.pdf`; checked parsed contact details, summary, experience, education, skills, project, certification and achievement; edited the name in review, confirmed it, and saw the saved result on Profile.
+- [x] DOCX: uploaded `tests/fixtures/resumes/structured.docx`; reviewed extracted fields and confirmed them. Previously confirmed profile identity/contact data was preserved while DOCX content was merged.
+- [x] Jobs: searched for a backend role, inspected local match reasons and score, saved a job, and prepared a demo application. Fictional demo data is labeled as not live vacancies.
+- [x] Application: reviewed the job-specific draft, cover letter and sample answers; approved the package; recorded “Demo application.” The UI stated that no external application was submitted.
+- [x] Tailored draft regression: after fixing profile/source identity precedence, prepared a new Full Stack Developer package. It showed `Asha QA Imported` and the profile-approved data rather than `LEO CHEN` and stale source content.
+- [x] Tracker: application events progressed through Prepared, Approved and Applied. Changed status to Interview with a synthetic note, then refreshed; status, note and history remained visible.
+- [x] Downloads: exported JSON application package and checked exact output name, nonzero size (1,864 bytes), valid JSON and expected job/version fields; downloaded original DOCX and checked 1,498 bytes and ZIP member integrity; downloaded the newly prepared profile-authoritative `RES-50294546-4C64-461C-B750-8E03DBE37260.txt` and checked its 1,410-byte UTF-8 content begins with the confirmed profile name and summary.
+- [x] Reload persistence: saved profile, target role, job, confirmed resume data, application and tracker history persisted after page reloads in the same browser profile.
+- [x] Safari accessibility tree exposed a skip-to-content link, main navigation links, labeled form controls and named action buttons on the checked resume/jobs/application views.
+
+## NOT VERIFIED
+
+- [ ] Full viewport matrix: 1440×900 desktop and 1024×768 tablet were not tested. At 390×844, only `/dashboard` was visually spot-checked; `/profile`, `/resume`, `/jobs`, `/applications`, `/tracker`, `/privacy` and `/terms` were not visually checked at that viewport. No programmatic overflow measurements were collected.
+- [ ] Full browser console/network review for console errors and failed requests.
+- [ ] Complete keyboard navigation, visible focus, Escape behavior, mobile menu interaction, form validation/error announcements, color contrast and heading hierarchy audit. The dashboard AX tree exposed a skip link, named nav and a mobile menu button; that is partial inspection only.
+- [ ] Quit/reopen the same Safari profile to verify true browser restart persistence. A reload is not a restart test. Safari contained another unrelated user tab, so it was left open.
+- [ ] Browser-only negative/edge tests for malformed, oversized, encrypted, scanned or complex-layout files. Automated tests cover representative parsing and error cases; OCR is not implemented.
+- [ ] Repeat browser download validation on all browser engines. File checks were performed on generated output paths only; unrelated Downloads contents were not opened.
+
+## BLOCKED
+
+- [ ] Production-origin HTTPS, direct deep-link refresh, deployed assets and production smoke test: no provider/domain connection or deployment credentials were configured. Static hosting instructions are in [DEPLOYMENT.md](DEPLOYMENT.md).
+- [ ] Live provider workflow: no external job source or provider credentials are configured; browser jobs are fictional demo listings.
+
+## Reproduction commands
 
 ```sh
 npm run qa:fixtures
@@ -9,60 +41,4 @@ npm run preview -- --port 4173
 npm run qa:routes -- http://127.0.0.1:4173
 ```
 
-Use the URL printed by Vite if the port changes. Generated fixtures live in `tmp/qa-fixtures/` and are not deployed. Connect the supported graphical browser before recording results. Record browser/version, OS, date, URL, viewport, steps, expected/actual results and screenshots for failures.
-
-## Every route, every viewport
-
-Visit `/dashboard`, `/profile`, `/resume`, `/jobs`, `/applications`, `/applications/tracker`, `/privacy`, `/terms` at each of 1440 × 900, 1024 × 768 and 390 × 844. Repeat populated pages after completing the workflow.
-
-- [ ] No horizontal overflow, clipping, broken grid, offscreen buttons or unreadable text.
-- [ ] Sidebar, sticky elements, footer links, dialogs and document scaling fit.
-- [ ] All buttons and links perform their stated action; disabled actions explain prerequisites.
-- [ ] Empty, loading, success and error states are understandable.
-- [ ] Back/forward, direct links, refresh and unknown-route state work.
-- [ ] Keyboard order and visible focus work; mobile menu supports Escape and restores focus.
-- [ ] Tabs support arrows/Home/End; dialogs contain focus and close correctly.
-- [ ] Screen reader announces names, roles, selected states and validation errors.
-- [ ] Check rendered contrast, touch-target dimensions, 200% text zoom and reduced motion.
-
-## Profile and jobs
-
-- [ ] Submit missing/invalid fields, correct them, save and reload.
-- [ ] Add/remove repeatable entries and skills; test duplicates and long values.
-- [ ] Search and combine job filters; check zero results and save/unsave persistence.
-- [ ] Confirm demo labels remain visible and preparing without prerequisites gives guidance.
-
-## Resume
-
-- [ ] Upload `resume-two-pages.pdf`; inspect both pages, pagination bounds and zoom 60–160%.
-- [ ] Upload `resume.docx`; verify text, tabs and line breaks in the reflowed preview.
-- [ ] Reject `invalid.pdf`, `malformed.docx`, `empty.pdf`, `oversized.pdf` with useful errors and recoverable upload controls.
-- [ ] Separately supply synthetic scanned, password-protected and over-50-page PDFs; verify honest handling and limits.
-- [ ] Review/edit/confirm extraction; absent information is not invented.
-- [ ] Download each original before and after editing/version creation; compare SHA-256 with uploaded bytes (`shasum -a 256 <file>`).
-- [ ] Create independent versions for two jobs; editing one does not change the other or original.
-- [ ] Navigate away during upload and rapidly change pages/files; no stale content, lost state or unresolved spinner.
-- [ ] Refresh, close the browser completely, reopen the same origin and verify original files, metadata and versions.
-
-## Applications and tracker
-
-- [ ] Prepare two applications; verify unique IDs, correct job/version associations and events.
-- [ ] Saving draft text leaves it a draft. Review, write cover letter/answers, confirm accuracy, then approve.
-- [ ] Invalid email/missing prerequisites block approval. Edits require confirmation again.
-- [ ] Approval preserves the applicant snapshot and locks the approved version.
-- [ ] Record demo apply; exact disclosure says “No external application was submitted.”
-- [ ] Export package; inspect content and version association.
-- [ ] Record In Review, Shortlisted, Interview, Offer, Rejected, Withdrawn, Expired and Skipped using separate test applications where needed; history remains intact.
-- [ ] Check next actions, reload/restart persistence and unknown application IDs.
-
-## Storage, privacy and runtime
-
-- [ ] Export records and cancel deletion first; confirm nothing was removed.
-- [ ] Confirm deletion; verify localStorage records and IndexedDB originals are gone after reload/restart.
-- [ ] In a disposable workspace test denied storage/quota, corrupt JSON, cross-tab changes and blocked IndexedDB; errors must be visible and corrupt data exportable.
-- [ ] Inspect console and network throughout: no React errors, unhandled rejections, missing modules/assets, PDF-worker errors, IndexedDB errors or unexpected external requests.
-- [ ] Verify legal routes/footer links, title, favicon and metadata in the actual browser.
-
-## Production pass
-
-After configuring the actual host, repeat direct-load/refresh checks for all eight routes and unknown paths. Verify custom domain, HTTPS, production origin, SPA rewrites, assets, metadata and console/network on that origin. Obtain legal review and replace operator/contact placeholders. Record results in QA.md; do not infer production success from localhost.
+The route script checks application-shell responses and built assets only; it is not a substitute for rendered browser verification. Full verification status and limitations are recorded in [QA.md](../QA.md).

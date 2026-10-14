@@ -1,9 +1,12 @@
 import {
   useId,
+  Children,
   cloneElement,
   isValidElement,
   type ReactElement,
   type InputHTMLAttributes,
+  type TextareaHTMLAttributes,
+  type SelectHTMLAttributes,
   type ReactNode,
 } from "react";
 import { ArrowUpRight, FolderOpen } from "lucide-react";
@@ -87,9 +90,15 @@ export function Field({
   required?: boolean;
 }) {
   const generated = useId();
-  const child = isValidElement<InputHTMLAttributes<HTMLInputElement>>(children)
-    ? children
-    : null;
+  type FieldControl =
+    | InputHTMLAttributes<HTMLInputElement>
+    | TextareaHTMLAttributes<HTMLTextAreaElement>
+    | SelectHTMLAttributes<HTMLSelectElement>;
+  const isControl = (node: ReactNode): node is ReactElement<FieldControl> =>
+    isValidElement<FieldControl>(node) &&
+    typeof node.type === "string" &&
+    ["input", "textarea", "select"].includes(node.type);
+  const child = Children.toArray(children).find(isControl) || null;
   const id = child?.props.id || generated;
   const description =
     [
@@ -99,20 +108,24 @@ export function Field({
     ]
       .filter(Boolean)
       .join(" ") || undefined;
+  let assignedControl = false;
   return (
     <div className="field">
       <label htmlFor={id}>{label}</label>
-      {child
-        ? cloneElement(
-            child as ReactElement<InputHTMLAttributes<HTMLInputElement>>,
-            {
-              id,
-              "aria-describedby": description,
-              "aria-invalid": error ? true : undefined,
-              "aria-required": required || undefined,
-            },
-          )
-        : children}
+      {Children.map(children, (node) =>
+        isControl(node) && !assignedControl
+          ? (() => {
+              assignedControl = true;
+              return cloneElement(node, {
+                id,
+                name: node.props.name || id,
+                "aria-describedby": description,
+                "aria-invalid": error ? true : undefined,
+                "aria-required": required || undefined,
+              });
+            })()
+          : node,
+      )}
       {hint && <small id={`${id}-hint`}>{hint}</small>}
       {error && (
         <small className="field-error" id={`${id}-error`}>

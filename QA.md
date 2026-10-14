@@ -1,35 +1,42 @@
-# VERIFIED
+# CareerOS QA and release status
 
-Verification date: 2026-10-06. Scope: local source, automated tests and local production-build HTTP checks; no graphical browser or production deployment was available.
+Last verification: 2026-10-14. CareerOS is a browser-local MVP. It has no backend, account system, cross-device synchronization, live job feed, or external AI integration. Browser checks used synthetic test resumes only.
 
-- Baseline: all original 31 tests and production build passed before hardening. Final: **71 tests in six files passed**, strict TypeScript compilation and Vite production build passed. No existing tests were removed or weakened. `npm install` completed; live `npm audit` reported **zero known vulnerabilities**. No lint command is configured.
-- Local route serving: all eight requested routes plus the unknown-route shell returned correctly. All **193 built assets** matched `dist/` byte-for-byte over HTTP, including the favicon, PDF worker, character maps and standard fonts. This does not establish production rewrites or browser execution.
-- Favicon, page title and metadata: inspected the original CareerOS SVG favicon and built HTML title, description, viewport, theme color and basic Open Graph tags. Route title behavior is covered by tests. Actual browser display and production social previews remain unverified.
-- Builder branding removed / no placeholder branding: source inspection found CareerOS branding without builder badges, “Made with AI” branding or placeholder logo/favicon. Legal operator/contact placeholders remain intentionally pending.
-- No fake metrics/content: demo listings remain explicitly fictional; no real employer connection, invented applicant qualification or real external application is claimed. Demo apply explicitly says “No external application was submitted.” No future-feature routes were added.
-- Automated functional coverage: eight routed pages, unknown-route state, back/forward navigation, mobile-menu state, keyboard tab selection, labelled forms and dialogs, validation, empty/error states, filtering, search, saving, confirmation and deletion.
-- Automated resume coverage: real PDF.js extraction, DOCX XML parsing, invalid/empty files, upload failures and rollback, immutable original storage, extraction editing/confirmation, separate versions and preview task cleanup. Preview rendering tests use mocks; downloads verify browser-API initiation only.
-- Automated application coverage: unique identifiers, job/version association, required review and approval, immutable approved snapshots, Prepared/Approved/Applied and all eight subsequent statuses, history and persistence. Saving a draft does not mark it reviewed.
-- Reliability fixes: corrupt records are preserved and can be exported; stale updates and cross-tab overwrite attempts are rejected; deletion works when storage quota is exhausted; uploads cannot silently overwrite newer state. PDF resources are served locally.
-- Accessibility improvements: roving keyboard tabs, associated labels/errors, focus restoration, mobile-menu isolation, legal footer links and larger small text. Primary button color-token contrast was calculated at 5.46:1 (normal) and 4.71:1 (hover); this is not a complete rendered contrast audit.
-- Evidence: `tmp/qa/baseline-tests.log`, `baseline-build.log`, `final-tests.log`, `final-build.log`, `final-audit.json`, `final-routes.log`. Reproduction commands and browser procedures are in [README.md](README.md) and [docs/BROWSER_QA.md](docs/BROWSER_QA.md).
+## VERIFIED
 
-# NOT VERIFIED
+| Area | Evidence |
+|---|---|
+| Automated regression | Final run: 88 tests passed across 8 files; `npm run check`, `npm run build`, and `git diff --check` passed. |
+| Production route/assets check | Local production preview; `npm run qa:routes -- http://127.0.0.1:4174` passed for 10 application routes and 194 built assets. `dist/_redirects` is present with `/* /index.html 200`. The checker verifies shell responses/assets, not rendered page behavior. |
+| Responsive spot check | Safari Responsive Design Mode displayed `/dashboard` at 390×844 with the mobile header/menu control and no obvious visual overlap or clipped card content in the visible region. This is a single-page spot check, not the requested full viewport matrix. |
+| PDF resume browser flow | In Safari, uploaded `tests/fixtures/resumes/single-column.pdf`, inspected extracted personal/contact details, summary, employment, education, skills, project, certification and achievement, edited the name, confirmed, and verified the profile update. |
+| DOCX resume browser flow | In Safari, uploaded `tests/fixtures/resumes/structured.docx`, reviewed extracted details and confirmed them. Profile showed merged content while preserving previously confirmed name and contact information. |
+| Tailored resume source consistency | Prepared a new Full Stack Developer demo application after the profile-authoritative formatter fix. Its draft used the confirmed profile name `Asha QA Imported`, saved summary, profile experience, education, skills, projects and certifications; it did not substitute the DOCX source name `LEO CHEN`. The original resume remains unchanged. |
+| Application workflow | Safari completed job search, selected a demo role, inspected its local match breakdown, saved a job, prepared a draft, edited/reviewed the package, approved, and recorded a demo apply. The UI explicitly stated no external application was submitted. |
+| Tracker workflow | `/tracker` rendered directly and survived reload. A recorded application moved through Prepared, Approved and Applied; a manual Interview update and note appeared in the history and remained after reload. Legacy `/applications/tracker` resolved to `/tracker`; an unknown path displayed the not-found page. |
+| Downloads | Browser produced an application-package `.json` (1,864 bytes, parsed as valid JSON and included the expected job/resume version), original `structured.docx` (1,498 bytes; ZIP integrity test passed), and the newly prepared profile-authoritative tailored resume `RES-50294546-4C64-461C-B750-8E03DBE37260.txt` (1,410 bytes, UTF-8 text containing the confirmed profile identity/content). These were checked by exact generated filenames only. |
+| Reload persistence | Profile fields, target role, saved job, resume original/confirmed extraction, application and tracker history survived page reloads within the same Safari profile. This is reload evidence only, not a browser restart test. |
+| Local security boundaries | Uploaded documents are parsed in-browser with local libraries. PDF parsing disables PDF.js evaluation, DOCX content is parsed as XML text, uploaded content is not executed in the DOM, and size/page-count limits are enforced. Profile records use localStorage and original documents use IndexedDB. There is no authentication or encryption at rest. |
 
-These launch gates remain open despite the limited automated coverage above:
+## NOT VERIFIED
 
-- Privacy Policy reviewed; Terms & Conditions reviewed: standalone routes and footer navigation exist, but no legal review has occurred. Final operator/contact details and jurisdiction are required.
-- Navigation verified; buttons verified; links verified; forms verified: full real-browser audit of every control, keyboard order, validation announcement and destination remains pending.
-- Resume upload verified; resume preview verified; resume download verified: actual browser uploads, canvas rendering, pagination, zoom, file byte preservation after download, scanned/password-protected handling and persistence across browser restarts remain pending.
-- Application flow verified; application tracker verified: end-to-end browser workflow and restart persistence remain pending; automated domain/component coverage passed.
-- No broken routes: local HTTP serving and component routing passed; direct production loads, refresh and back/forward behavior remain pending.
-- Final functional QA: full browser audit, screen-reader behavior, reduced motion, storage permissions and failure recovery remain pending.
-- Production-specific metadata (including final origin/social URLs where appropriate), actual favicon appearance and social preview rendering remain pending.
+| Area | Remaining verification |
+|---|---|
+| Viewport matrix | Desktop 1440×900 and tablet 1024×768 were not checked. Mobile 390×844 was visually spot-checked on `/dashboard` only. The remaining seven requested routes and programmatic horizontal-overflow measurements were not verified. |
+| Browser diagnostics | Safari Web Inspector opened, but no usable console/network results were captured. Console errors and failed requests are not certified absent. |
+| Accessibility sweep | Safari’s accessibility tree exposed a skip link and named navigation on the dashboard. Full keyboard order, visible focus states, Escape behavior, menu operation, form error announcements, contrast and heading structure across routes were not audited. |
+| Browser restart persistence | Safari was not quit and reopened because the browser also had an unrelated user tab. Reload persistence was checked; true browser restart persistence remains unverified. |
+| Extraction edge cases in browser | Automated tests cover malformed documents and representative fixtures; scanned/OCR, encrypted, oversized and complex-layout documents were not all exercised through the graphical browser. OCR is not implemented. |
+| Lint | No lint script is defined in `package.json`; lint was not run. |
 
-# BLOCKED
+## BLOCKED
 
-- Desktop browser QA (1440 × 900), tablet browser QA (1024 × 768), mobile browser QA (390 × 844) and final visual QA: the browser runtime reported no connected browser. Horizontal overflow, clipping, grids, dialog sizing, touch targets, rendered contrast, sticky elements and document scaling cannot be certified. [Browser checklist](docs/BROWSER_QA.md) and synthetic fixtures are prepared.
-- Console clean; network errors resolved: no graphical browser session was available. Local asset HTTP checks passed but do not establish a clean runtime console/network or absence of PDF/IndexedDB errors.
-- Custom domain connected; HTTPS working; production origin settings verified; SPA rewrites configured; deep links tested in production: no production host, final origin or connected domain was available. Local Vite fallback is not production hosting verification.
+| Area | Blocker |
+|---|---|
+| Production deployment | No production host, domain or deployment credentials were supplied. HTTPS, deployed deep links, production assets and a live production smoke test remain unverified. |
+| Live job sources | No external source/provider or permitted credentials are configured. Job listings are fictional local demo data. |
+| Account security and server persistence | The current architecture is browser-local and has no authentication, server-side ownership controls or encrypted storage. |
+| Dependency audit | `npm audit --audit-level=low` could not reach `registry.npmjs.org` (`ENOTFOUND`). Vulnerability status is unknown until registry access is restored and the audit is rerun. |
+| Legal release | Privacy and Terms are operational drafts; operator identity, contact information, jurisdiction, retention requirements and legal review remain launch requirements. |
 
-**CareerOS is not declared production-ready.** Complete the open gates and record real evidence before launch.
+CareerOS is not declared production-ready. Local automated and browser checks passed in the listed areas; deployment and the open verification gates above remain outstanding.

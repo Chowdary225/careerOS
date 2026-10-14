@@ -222,6 +222,8 @@ export function Tracker() {
                 <div className="form-grid">
                   <Field label="New status">
                     <select
+                      id="tracker-status"
+                      name="status"
                       value={status}
                       onChange={(e) => {
                         if (isStatus(e.target.value)) setStatus(e.target.value);
@@ -234,6 +236,8 @@ export function Tracker() {
                   </Field>
                   <Field label="Note (optional)">
                     <input
+                      id="tracker-status-note"
+                      name="note"
                       value={note}
                       onChange={(e) => setNote(e.target.value)}
                       placeholder="Add context to this update"

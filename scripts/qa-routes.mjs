@@ -7,6 +7,7 @@ const routes = [
   "/resume",
   "/jobs",
   "/applications",
+  "/tracker",
   "/applications/tracker",
   "/privacy",
   "/terms",

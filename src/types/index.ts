@@ -3,12 +3,20 @@ export interface User {
   email: string;
   phone: string;
   location: string;
+  linkedin?: string;
+  portfolio?: string;
+  source?: ResumeSource;
+}
+export interface ResumeSource {
+  resumeId: string;
+  resumeName: string;
 }
 export interface Education {
   id: string;
   institution: string;
   degree: string;
   dates: string;
+  source?: ResumeSource;
 }
 export interface Experience {
   id: string;
@@ -16,20 +24,26 @@ export interface Experience {
   role: string;
   dates: string;
   description: string;
+  source?: ResumeSource;
 }
 export interface Skill {
   id: string;
   name: string;
+  source?: ResumeSource;
 }
 export interface Project {
   id: string;
   name: string;
   description: string;
+  technologies?: string[];
+  url?: string;
+  source?: ResumeSource;
 }
 export interface Certification {
   id: string;
   name: string;
   issuer: string;
+  source?: ResumeSource;
 }
 export interface CareerProfile {
   user: User;
@@ -48,6 +62,7 @@ export interface CareerProfile {
   certifications: Certification[];
   achievements: string;
   summary: string;
+  resumeImports?: ResumeSource[];
 }
 export const sections = [
   "Experience",
@@ -70,6 +85,59 @@ export interface Resume {
   text: string;
   pageCount: number;
   extraction: Record<Section, Extraction>;
+  structuredExtraction?: StructuredResume;
+  structuredConfirmed?: boolean;
+}
+export type ExtractionConfidence = "high" | "review";
+export interface ExtractedPersonalInfo {
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  location: string | null;
+  linkedin: string | null;
+  portfolio: string | null;
+}
+export interface ExtractedExperience {
+  company: string | null;
+  jobTitle: string | null;
+  location: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  responsibilities: string[];
+  achievements: string[];
+}
+export interface ExtractedEducation {
+  institution: string | null;
+  degree: string | null;
+  field: string | null;
+  location: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  grade: string | null;
+}
+export interface ExtractedProject {
+  name: string;
+  description: string;
+  technologies: string[];
+  url: string | null;
+}
+export interface ExtractedCertification {
+  name: string;
+  issuer: string | null;
+  date: string | null;
+}
+export interface StructuredResume {
+  personalInfo: ExtractedPersonalInfo;
+  professionalSummary: string | null;
+  experience: ExtractedExperience[];
+  education: ExtractedEducation[];
+  skills: string[];
+  projects: ExtractedProject[];
+  certifications: ExtractedCertification[];
+  achievements: string[];
+  confidence: Record<string, ExtractionConfidence>;
+  reviewRequired: string[];
+  warnings: string[];
 }
 export interface ResumeVersion {
   id: string;
@@ -95,6 +163,7 @@ export interface Job {
 }
 export interface JobMatch {
   percentage: number;
+  roleRelevance: number;
   skills: string[];
   missing: string[];
   experience: boolean | null;

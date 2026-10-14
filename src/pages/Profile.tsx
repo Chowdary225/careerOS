@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Plus, X, Check, Save } from "lucide-react";
 import { useStore } from "../app/store";
-import { PageHeader, Field, Badge } from "../components/ui";
+import { PageHeader, Field, Badge, RouteButton } from "../components/ui";
 import { id } from "../services/repository";
 import { Tabs } from "../components/Tabs";
 import { validEmail } from "../services/validation";
@@ -54,8 +54,8 @@ export function Profile() {
       return;
     }
     if (
-      p.education.some((e) => !e.institution.trim() || !e.degree.trim()) ||
-      p.experience.some((e) => !e.company.trim() || !e.role.trim())
+      p.education.some((e) => !e.source && (!e.institution.trim() || !e.degree.trim())) ||
+      p.experience.some((e) => !e.source && (!e.company.trim() || !e.role.trim()))
     ) {
       setTab("Professional profile");
       setError("Complete or remove empty education and experience entries.");
@@ -119,6 +119,11 @@ export function Profile() {
                 </div>
                 <Badge>01</Badge>
               </div>
+              {p.user.source && (
+                <p className="muted small">
+                  Personal information imported from Original Resume: {p.user.source.resumeName}. Please review it.
+                </p>
+              )}
               <div className="form-grid">
                 <Field
                   label="Full name *"
@@ -130,6 +135,8 @@ export function Profile() {
                   }
                 >
                   <input
+                    id="profile-full-name"
+                    name="name"
                     value={p.user.name}
                     autoComplete="name"
                     onChange={(e) =>
@@ -147,6 +154,8 @@ export function Profile() {
                   }
                 >
                   <input
+                    id="profile-email"
+                    name="email"
                     type="email"
                     value={p.user.email}
                     autoComplete="email"
@@ -157,6 +166,8 @@ export function Profile() {
                 </Field>
                 <Field label="Phone">
                   <input
+                    id="profile-phone"
+                    name="phone"
                     type="tel"
                     value={p.user.phone}
                     autoComplete="tel"
@@ -167,10 +178,30 @@ export function Profile() {
                 </Field>
                 <Field label="Current location">
                   <input
+                    id="profile-current-location"
+                    name="personal-location"
                     value={p.user.location}
                     onChange={(e) =>
                       change("user", { ...p.user, location: e.target.value })
                     }
+                  />
+                </Field>
+                <Field label="LinkedIn profile">
+                  <input
+                    id="profile-linkedin"
+                    name="linkedin"
+                    type="url"
+                    value={p.user.linkedin || ""}
+                    onChange={(e) => change("user", { ...p.user, linkedin: e.target.value })}
+                  />
+                </Field>
+                <Field label="Portfolio or website">
+                  <input
+                    id="profile-portfolio"
+                    name="portfolio"
+                    type="url"
+                    value={p.user.portfolio || ""}
+                    onChange={(e) => change("user", { ...p.user, portfolio: e.target.value })}
                   />
                 </Field>
                 <Field
@@ -336,8 +367,15 @@ export function Profile() {
             <>
               <h2>Professional profile</h2>
               <p className="muted">
-                Use only experience and qualifications you can verify.
+                Use only experience and qualifications you can verify. Confirmed
+                resume sections are added here for review.
               </p>
+              <RouteButton to="/resume">Upload or review resume</RouteButton>
+              {p.resumeImports?.map((source) => (
+                <p className="muted small" key={source.resumeId}>
+                  Imported from Original Resume: {source.resumeName}. Check imported values before using them.
+                </p>
+              ))}
               <Field label="Professional summary">
                 <textarea
                   rows={4}
@@ -368,6 +406,8 @@ export function Profile() {
                   }}
                 >
                   <input
+                    id="profile-new-skill"
+                    name="skill"
                     aria-label="New skill"
                     value={skill}
                     onChange={(e) => setSkill(e.target.value)}
@@ -391,6 +431,7 @@ export function Profile() {
                   {p.skills.map((s) => (
                     <span className="chip" key={s.id}>
                       {s.name}
+                      {s.source && <small title={`Imported from ${s.source.resumeName}`}>Resume</small>}
                       <button
                         aria-label={`Remove ${s.name}`}
                         onClick={() =>
@@ -431,6 +472,7 @@ export function Profile() {
                 {p.experience.map((entry, index) => (
                   <fieldset key={entry.id}>
                     <legend>Experience {index + 1}</legend>
+                    {entry.source && <p className="muted small">Imported from Original Resume: {entry.source.resumeName}. Please review this information.</p>}
                     <div className="form-grid">
                       {(
                         ["company", "role", "dates", "description"] as const
@@ -438,7 +480,7 @@ export function Profile() {
                         <Field
                           key={key}
                           error={
-                            attempted &&
+                            attempted && !entry.source &&
                             (key === "company" || key === "role") &&
                             !entry[key].trim()
                               ? "Complete this field or remove the entry."
@@ -499,6 +541,7 @@ export function Profile() {
                 {p.education.map((entry, index) => (
                   <fieldset key={entry.id}>
                     <legend>Education {index + 1}</legend>
+                    {entry.source && <p className="muted small">Imported from Original Resume: {entry.source.resumeName}. Please review this information.</p>}
                     <div className="form-grid">
                       {(["institution", "degree", "dates"] as const).map(
                         (key) => (
@@ -506,7 +549,7 @@ export function Profile() {
                             key={key}
                             label={key}
                             error={
-                              attempted &&
+                              attempted && !entry.source &&
                               ["institution", "degree", "name"].includes(key) &&
                               !entry[key].trim()
                                 ? "Complete this field or remove the entry."
@@ -552,7 +595,7 @@ export function Profile() {
                     onClick={() =>
                       change("projects", [
                         ...p.projects,
-                        { id: id(), name: "", description: "" },
+                        { id: id(), name: "", description: "", technologies: [], url: "" },
                       ])
                     }
                   >
@@ -562,6 +605,7 @@ export function Profile() {
                 </div>
                 {p.projects.map((entry) => (
                   <fieldset key={entry.id}>
+                    {entry.source && <p className="muted small">Imported from Original Resume: {entry.source.resumeName}. Please review this information.</p>}
                     {(["name", "description"] as const).map((key) => (
                       <Field
                         key={key}
@@ -589,6 +633,35 @@ export function Profile() {
                         />
                       </Field>
                     ))}
+                    <Field label="Technologies (comma-separated)">
+                      <input
+                        value={entry.technologies?.join(", ") || ""}
+                        onChange={(e) =>
+                          change(
+                            "projects",
+                            p.projects.map((v) =>
+                              v.id === entry.id
+                                ? { ...v, technologies: e.target.value.split(",").map((item) => item.trim()).filter(Boolean) }
+                                : v,
+                            ),
+                          )
+                        }
+                      />
+                    </Field>
+                    <Field label="Project link (optional)">
+                      <input
+                        type="url"
+                        value={entry.url || ""}
+                        onChange={(e) =>
+                          change(
+                            "projects",
+                            p.projects.map((v) =>
+                              v.id === entry.id ? { ...v, url: e.target.value } : v,
+                            ),
+                          )
+                        }
+                      />
+                    </Field>
                     <button
                       className="text-button danger"
                       onClick={() =>
@@ -621,12 +694,13 @@ export function Profile() {
                 </div>
                 {p.certifications.map((entry) => (
                   <fieldset key={entry.id}>
+                    {entry.source && <p className="muted small">Imported from Original Resume: {entry.source.resumeName}. Please review this information.</p>}
                     {(["name", "issuer"] as const).map((key) => (
                       <Field
                         key={key}
                         label={key}
                         error={
-                          attempted &&
+                          attempted && !entry.source &&
                           ["institution", "degree", "name"].includes(key) &&
                           !entry[key].trim()
                             ? "Complete this field or remove the entry."

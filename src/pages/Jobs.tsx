@@ -106,6 +106,8 @@ export function Jobs() {
         <div className="search-input">
           <Search size={19} />
           <input
+            id="job-search"
+            name="job-search"
             aria-label="Search jobs"
             placeholder="Search by role or company"
             value={query}
@@ -294,7 +296,7 @@ export function Jobs() {
                 <div>
                   <h3>Your match breakdown</h3>
                   <p>
-                    60% skills · 20% experience · 10% education · 10% location
+                    50% skills · 20% target-role wording · 15% experience · 5% education · 10% location/work mode
                   </p>
                 </div>
                 <strong>
@@ -312,10 +314,14 @@ export function Jobs() {
                     {match.skills.length} / {job.skills.length}
                   </strong>
                 </span>
+                <span>
+                  Target-role wording
+                  <strong>{match.roleRelevance}% aligned</strong>
+                </span>
                 {(["experience", "education", "location"] as const).map(
                   (key) => (
                     <span key={key}>
-                      {key}
+                      {key === "location" ? "Location / work mode" : key}
                       <strong>
                         {match[key] === null
                           ? "Not provided"
