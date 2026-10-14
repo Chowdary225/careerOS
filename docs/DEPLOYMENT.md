@@ -2,7 +2,7 @@
 
 ## Current configuration
 
-CareerOS is a Vite + React Router single-page app. A successful `npm run build` writes the static site to `dist/`. The build currently emits `dist/index.html`, hashed JS/CSS bundles, `/favicon.svg`, and local PDF.js character maps/fonts. `public/_redirects` contains `/* /index.html 200` so Netlify and Cloudflare Pages send direct route requests to the React app. The app then renders its own not-found page for unknown paths.
+CareerOS is a Vite + React Router single-page app. A successful `npm run build` writes the static site to `dist/`. The build currently emits `dist/index.html`, hashed JS/CSS bundles, `/favicon.svg`, and local PDF.js character maps/fonts. `public/_redirects` contains `/* /index.html 200` for Netlify. Cloudflare Pages provides SPA fallback routing automatically when there is no top-level `404.html`; the React app renders its own not-found page for unknown paths.
 
 All asset URLs use the domain root. Deploy at the host's root path (for example, `https://careeros.example/`); a subdirectory deployment would need a Vite `base` value and matching router basename first. No application environment variables are required or read by the current code. Do not add secrets to a frontend build: values compiled into static assets are public.
 
@@ -21,12 +21,13 @@ The route checker verifies shell responses and asset bytes from the local previe
 
 ## Cloudflare Pages setup
 
-1. Push the reviewed project to a Git repository and connect that repository under **Workers & Pages → Create application → Pages → Import an existing Git repository**.
-2. Set the build command to `npm run build`, build output directory to `dist`, and root directory to the repository root. No environment variables are needed.
-3. Deploy the first revision to its generated Pages URL. Check the build log and repeat the direct-route/refresh smoke test on `/tracker`, `/profile`, and an unknown path.
-4. Under the Pages project's **Custom domains**, add a domain. For an apex domain, Cloudflare requires the domain to be on the account and its nameservers configured; for a subdomain, follow the dashboard's DNS instructions. Wait for the domain status and certificate to become active, then test HTTPS and HTTP-to-HTTPS behavior before public use.
+The current project is `careeros-app`, connected to `Chowdary225/careerOS` on production branch `main`. Its build command is `npm run build`, output directory is `dist`, and root directory is `/`. The successful deployment is available at [https://careeros-app.pages.dev](https://careeros-app.pages.dev). The deployed `/tracker` direct-load and refresh, plus an unknown route, were verified on 2026-10-14. Other deployed routes and the full browser workflow remain unverified.
 
-Cloudflare's current documentation lists `npm run build` and `dist` for React (Vite), and documents `_redirects` as the static redirect file location: [build configuration](https://developers.cloudflare.com/pages/configuration/build-configuration/), [redirects](https://developers.cloudflare.com/pages/configuration/redirects/), [custom domains](https://developers.cloudflare.com/pages/configuration/custom-domains/).
+The Pages dashboard settings show the Git repository connected and automatic deployments enabled for `main`. The initial build of commit `cb2b42708b0303451dc1588c70bb99059ffa7673` succeeded. A later commit has not yet been pushed to confirm a subsequent automatic deployment.
+
+To add a custom domain, open the Pages project's **Custom domains** and follow Cloudflare's DNS instructions. For an apex domain, Cloudflare requires the domain to be on the account and its nameservers configured; for a subdomain, follow the dashboard's DNS instructions. Wait for the domain status and certificate to become active, then test HTTPS and HTTP-to-HTTPS behavior before public use. No custom domain is currently configured.
+
+Cloudflare documents Pages' [single-page application fallback](https://developers.cloudflare.com/pages/configuration/serving-pages/), [build configuration](https://developers.cloudflare.com/pages/configuration/build-configuration/), and [custom domains](https://developers.cloudflare.com/pages/configuration/custom-domains/). Netlify uses the `_redirects` file described below.
 
 ## Netlify setup
 
@@ -39,8 +40,8 @@ Netlify documents the SPA fallback rule used in `public/_redirects` in its [page
 
 ## Release constraints
 
-- Cloudflare is signed in in Safari, but the GitHub integration does not list `Chowdary225/careerOS`; the account's existing Pages project is unrelated and was left untouched. No CareerOS Pages project or deployment was created. Add this repository in GitHub Settings → Applications → Installed GitHub Apps → Cloudflare Workers and Pages → Configure → Repository access, then retry. No custom domain is owned/configured.
+- The unrelated Pages project `new` was left untouched. A separate CareerOS Pages project, `careeros-app`, is deployed at `https://careeros-app.pages.dev`; the associated `careeros` Worker is separate. The GitHub connection was visible in Pages settings and automatic deployment was enabled for `main`. One deployment page briefly showed a disconnected-account warning; verify Git-triggered deployment with a subsequent commit before relying on automatic releases. No custom domain is configured.
 - The app stores user workspace records in origin-scoped `localStorage` and original resume files in origin-scoped IndexedDB. There is no account login, server storage, encryption-at-rest layer, or cross-device sync. This model is appropriate for a private local demo or a public demo using synthetic data with clear disclosures; it is not appropriate for collecting real applicants' resumes as a shared hosted service without an approved privacy/security design.
 - Before a public release, provide operator identity and contact details, set a policy effective date, obtain jurisdiction-specific legal review, review retention/deletion behavior, and decide whether collecting real resume data is in scope. The existing Privacy Policy and Terms describe current local-only behavior and remain drafts.
 - Listings are fictional examples. A future live job source requires a permitted provider, documented terms/licensing, stable feed/API access, provenance and freshness fields, error handling and source-specific display disclosures. Application submission must remain explicitly local-demo-only until a separately authorized employer integration exists.
-- The dependency audit run on 2026-10-14 reported zero known vulnerabilities. Full viewport/accessibility QA, same-profile browser-restart verification, and production-origin smoke tests remain open. Do not describe the service as production-ready until those release-specific checks have evidence.
+- The dependency audit run on 2026-10-14 reported zero known vulnerabilities. Full viewport/accessibility QA, same-profile browser-restart verification, deployed route-matrix/E2E checks, and a follow-up automatic deployment check remain open. Do not describe the service as production-ready until those release-specific checks have evidence.

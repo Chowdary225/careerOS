@@ -18,6 +18,8 @@ Last verification: 2026-10-14. CareerOS is a browser-local MVP. It has no backen
 | Downloads | Browser produced an application-package `.json` (1,864 bytes, parsed as valid JSON and included the expected job/resume version), original `structured.docx` (1,498 bytes; ZIP integrity test passed), and the newly prepared profile-authoritative tailored resume `RES-50294546-4C64-461C-B750-8E03DBE37260.txt` (1,410 bytes, UTF-8 text containing the confirmed profile identity/content). These were checked by exact generated filenames only. |
 | Reload persistence | Profile fields, target role, saved job, resume original/confirmed extraction, application and tracker history survived page reloads within the same Safari profile. This is reload evidence only, not a browser restart test. |
 | Local security boundaries | Uploaded documents are parsed in-browser with local libraries. PDF parsing disables PDF.js evaluation, DOCX content is parsed as XML text, uploaded content is not executed in the DOM, and size/page-count limits are enforced. Profile records use localStorage and original documents use IndexedDB. There is no authentication or encryption at rest. |
+| Cloudflare Pages deployment | GitHub repository `Chowdary225/careerOS` appeared in the Pages repository picker. Project `careeros-app` was created with production branch `main`, build command `npm run build`, and output directory `dist`. Cloudflare reported successful deployment of commit `cb2b42708b0303451dc1588c70bb99059ffa7673` to `https://careeros-app.pages.dev`. The deployment settings show the Git repository connected and automatic deployments enabled. |
+| Live production routing | In Safari, direct HTTPS navigation to `https://careeros-app.pages.dev/tracker` rendered Application Tracker; refreshing the page kept `/tracker` and rendered the same page. A direct unknown path rendered CareerOS's Page not found view. An initial request during rollout returned Cloudflare 522; retry after rollout completed succeeded. |
 
 ## NOT VERIFIED
 
@@ -29,14 +31,16 @@ Last verification: 2026-10-14. CareerOS is a browser-local MVP. It has no backen
 | Browser restart persistence | Safari was not quit and reopened because the browser also had an unrelated user tab. Reload persistence was checked; true browser restart persistence remains unverified. |
 | Extraction edge cases in browser | Automated tests cover malformed documents and representative fixtures; scanned/OCR, encrypted, oversized and complex-layout documents were not all exercised through the graphical browser. OCR is not implemented. |
 | Lint | No lint script is defined in `package.json`; lint was not run. |
+| Deployed route matrix and E2E | Only `/tracker` and an unknown route were checked on the deployed site. Other MVP routes, deployed application workflows, downloads, console/network diagnostics, mobile layouts, and deployed persistence were not tested. |
+| Subsequent automatic deployment | The project settings show automatic deployments enabled for `main`, but a later commit has not been pushed to verify a subsequent Git-triggered build. |
 
 ## BLOCKED
 
 | Area | Blocker |
 |---|---|
-| Production deployment | Cloudflare is signed in, but its GitHub integration does not expose `Chowdary225/careerOS` (the repository search returned no match). No Pages project was created and no deployment occurred. Grant the Cloudflare Workers and Pages GitHub App access to this repository, then retry. No custom domain is owned/configured. |
+| Custom domain | No CareerOS custom domain is configured. The Pages-provided `careeros-app.pages.dev` hostname is live over HTTPS; ownership of a custom domain, DNS, custom-domain TLS, and HTTP-to-HTTPS behavior on that domain are not configured or verified. |
 | Live job sources | No external source/provider or permitted credentials are configured. Job listings are fictional local demo data. |
 | Account security and server persistence | The current architecture is browser-local and has no authentication, server-side ownership controls or encrypted storage. |
 | Legal release | Privacy and Terms are operational drafts; operator identity, contact information, jurisdiction, retention requirements and legal review remain launch requirements. |
 
-CareerOS is not declared production-ready. Local automated and browser checks passed in the listed areas; deployment and the open verification gates above remain outstanding.
+CareerOS is not declared production-ready. A Pages deployment is live, but only the tracker direct-load/refresh and unknown-route smoke checks have been verified on that deployment. The other verification gates above remain open.
