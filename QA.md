@@ -8,6 +8,7 @@ Last verification: 2026-10-14. CareerOS is a browser-local MVP. It has no backen
 |---|---|
 | Automated regression | Final run: 88 tests passed across 8 files; `npm run check`, `npm run build`, and `git diff --check` passed. |
 | Production route/assets check | Local production preview; `npm run qa:routes -- http://127.0.0.1:4174` passed for 10 application routes and 194 built assets. `dist/_redirects` is present with `/* /index.html 200`. The checker verifies shell responses/assets, not rendered page behavior. |
+| Dependency audit | `npm audit --audit-level=low` completed on 2026-10-14 and reported 0 known vulnerabilities in the audited dependency tree. This is not a general security certification. |
 | Responsive spot check | Safari Responsive Design Mode displayed `/dashboard` at 390×844 with the mobile header/menu control and no obvious visual overlap or clipped card content in the visible region. This is a single-page spot check, not the requested full viewport matrix. |
 | PDF resume browser flow | In Safari, uploaded `tests/fixtures/resumes/single-column.pdf`, inspected extracted personal/contact details, summary, employment, education, skills, project, certification and achievement, edited the name, confirmed, and verified the profile update. |
 | DOCX resume browser flow | In Safari, uploaded `tests/fixtures/resumes/structured.docx`, reviewed extracted details and confirmed them. Profile showed merged content while preserving previously confirmed name and contact information. |
@@ -33,10 +34,9 @@ Last verification: 2026-10-14. CareerOS is a browser-local MVP. It has no backen
 
 | Area | Blocker |
 |---|---|
-| Production deployment | No production host, domain or deployment credentials were supplied. HTTPS, deployed deep links, production assets and a live production smoke test remain unverified. |
+| Production deployment | Cloudflare is signed in, but its GitHub integration does not expose `Chowdary225/careerOS` (the repository search returned no match). No Pages project was created and no deployment occurred. Grant the Cloudflare Workers and Pages GitHub App access to this repository, then retry. No custom domain is owned/configured. |
 | Live job sources | No external source/provider or permitted credentials are configured. Job listings are fictional local demo data. |
 | Account security and server persistence | The current architecture is browser-local and has no authentication, server-side ownership controls or encrypted storage. |
-| Dependency audit | `npm audit --audit-level=low` could not reach `registry.npmjs.org` (`ENOTFOUND`). Vulnerability status is unknown until registry access is restored and the audit is rerun. |
 | Legal release | Privacy and Terms are operational drafts; operator identity, contact information, jurisdiction, retention requirements and legal review remain launch requirements. |
 
 CareerOS is not declared production-ready. Local automated and browser checks passed in the listed areas; deployment and the open verification gates above remain outstanding.
