@@ -32,7 +32,7 @@ Last verification: 2026-10-14. CareerOS is a browser-local MVP. It has no backen
 | Extraction edge cases in browser | Automated tests cover malformed documents and representative fixtures; scanned/OCR, encrypted, oversized and complex-layout documents were not all exercised through the graphical browser. OCR is not implemented. |
 | Lint | No lint script is defined in `package.json`; lint was not run. |
 | Deployed route matrix and E2E | Only `/tracker` and an unknown route were checked on the deployed site. Other MVP routes, deployed application workflows, downloads, console/network diagnostics, mobile layouts, and deployed persistence were not tested. |
-| Subsequent automatic deployment | The project settings show automatic deployments enabled for `main`, but a later commit has not been pushed to verify a subsequent Git-triggered build. |
+| Subsequent automatic deployment | A follow-up documentation commit was pushed to `main`, but no second deployment appeared in Cloudflare during verification. Although the settings show automatic deployments enabled, the project displayed a warning that it is disconnected from the Git account; Git-triggered deployments remain unverified. |
 
 ## BLOCKED
 
